@@ -24,7 +24,12 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account createAccount(String userId, String accountName) throws UseException {
-
+        if (usersRepository.getEntityById(userId).isEmpty()) {
+            throw new UseException(Activity.CREATE_ACCOUNT, UseExceptionType.USER_NOT_FOUND);
+        }
+        if (accountsRepository.all().anyMatch(x -> x.getName().equals(accountName))) {
+            throw new UseException(Activity.CREATE_ACCOUNT, UseExceptionType.ACCOUNT_NAME_NOT_UNIQUE);
+        }
         AccountImpl account= new AccountImpl(usersRepository.getEntityById(userId).get(), accountName, userId , true);
         return accountsRepository.save(account);
     }
