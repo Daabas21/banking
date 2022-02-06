@@ -5,6 +5,7 @@ import se.sensera.banking.exceptions.Activity;
 import se.sensera.banking.exceptions.UseException;
 import se.sensera.banking.exceptions.UseExceptionType;
 
+import javax.naming.Name;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -30,13 +31,20 @@ public class AccountServiceImpl implements AccountService {
         if (accountsRepository.all().anyMatch(x -> x.getName().equals(accountName))) {
             throw new UseException(Activity.CREATE_ACCOUNT, UseExceptionType.ACCOUNT_NAME_NOT_UNIQUE);
         }
-        AccountImpl account= new AccountImpl(usersRepository.getEntityById(userId).get(), accountName, userId , true);
+        AccountImpl account = new AccountImpl(usersRepository.getEntityById(userId).get(), accountName, userId, true);
         return accountsRepository.save(account);
     }
 
     @Override
     public Account changeAccount(String userId, String accountId, Consumer<ChangeAccount> changeAccountConsumer) throws UseException {
-        return null;
+        Account account = accountsRepository.getEntityById(accountId).orElseThrow();
+        User user = usersRepository.getEntityById(userId).orElseThrow();
+
+        changeAccountConsumer.accept(name -> {
+            account.setName(name);
+            accountsRepository.save(account);
+        });
+        return account;
     }
 
     @Override
