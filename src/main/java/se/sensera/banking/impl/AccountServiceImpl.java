@@ -41,8 +41,10 @@ public class AccountServiceImpl implements AccountService {
         User user = usersRepository.getEntityById(userId).orElseThrow();
 
         changeAccountConsumer.accept(name -> {
+            if (!name.equals(account.getName())) {
             account.setName(name);
             accountsRepository.save(account);
+            }
         });
         return account;
     }
