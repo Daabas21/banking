@@ -67,9 +67,10 @@ public class AccountServiceImpl implements AccountService {
         }
 
         Account account = accountsRepository.getEntityById(accountId).get();
+        User user = usersRepository.getEntityById(userId).get();
         if (!account.isActive())
             throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_ACTIVE);
-        if (!account.getId().equals(accountsRepository.getEntityById(accountId)))
+        if (!account.getOwner().equals(user))
             throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_OWNER);
 
         account.setActive(false);
