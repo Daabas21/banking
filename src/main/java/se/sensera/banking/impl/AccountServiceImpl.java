@@ -58,6 +58,15 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public Account inactivateAccount(String userId, String accountId) throws UseException {
+        Account account = accountsRepository.getEntityById(accountId).get();
+
+        account.setActive(false);
+        accountsRepository.save(account);
+        return account;
+    }
+
+    @Override
     public Account addUserToAccount(String userId, String accountId, String userIdToBeAssigned) throws UseException {
         return null;
     }
@@ -67,10 +76,6 @@ public class AccountServiceImpl implements AccountService {
         return null;
     }
 
-    @Override
-    public Account inactivateAccount(String userId, String accountId) throws UseException {
-        return null;
-    }
 
     @Override
     public Stream<Account> findAccounts(String searchValue, String userId, Integer pageNumber, Integer pageSize, SortOrder sortOrder) throws UseException {
