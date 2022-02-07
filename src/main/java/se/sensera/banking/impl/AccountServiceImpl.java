@@ -41,6 +41,9 @@ public class AccountServiceImpl implements AccountService {
         User user = usersRepository.getEntityById(userId).orElseThrow();
 
         changeAccountConsumer.accept(name -> {
+            if (accountsRepository.all().anyMatch(account1 -> account1.getName().equals(name))){
+                throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.ACCOUNT_NAME_NOT_UNIQUE);
+            }
             if (!name.equals(account.getName())) {
             account.setName(name);
             accountsRepository.save(account);
