@@ -59,7 +59,18 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account inactivateAccount(String userId, String accountId) throws UseException {
+        if(accountsRepository.getEntityById(accountId).isEmpty()){
+            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_FOUND);
+        }
+        if (usersRepository.getEntityById(userId).isEmpty()) {
+            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.USER_NOT_FOUND);
+        }
+
         Account account = accountsRepository.getEntityById(accountId).get();
+        if (!account.isActive())
+            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_ACTIVE);
+        if (!account.getId().equals(accountsRepository.getEntityById(accountId)))
+            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_OWNER);
 
         account.setActive(false);
         accountsRepository.save(account);
