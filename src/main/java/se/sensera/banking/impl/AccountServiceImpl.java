@@ -80,7 +80,16 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account addUserToAccount(String userId, String accountId, String userIdToBeAssigned) throws UseException {
-        return null;
+        Account account = accountsRepository.getEntityById(accountId).get();
+        User user = usersRepository.getEntityById(userIdToBeAssigned).get();
+
+        if (userId.equals(userIdToBeAssigned))
+            throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.CANNOT_ADD_OWNER_AS_USER);
+        if (!userId.equals(account.getOwner().getId()))
+            throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_OWNER);
+
+        account.addUser(user);
+        return accountsRepository.save(account);
     }
 
     @Override
