@@ -7,7 +7,7 @@ import se.sensera.banking.User;
 
 import java.util.stream.Stream;
 
-@Data
+
 public class AccountImpl implements Account {
     String id;
     User owner;
