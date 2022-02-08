@@ -91,7 +91,7 @@ public class AccountServiceImpl implements AccountService {
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.CANNOT_ADD_OWNER_AS_USER);
         if (!userId.equals(account.getOwner().getId()))
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_OWNER);
-        if (accountsRepository.getEntityById(accountId).isPresent())
+        if (account.getUsers().anyMatch(user1 -> user1.equals(usersRepository.getEntityById(userIdToBeAssigned).get())))
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.USER_ALREADY_ASSIGNED_TO_THIS_ACCOUNT);
 
         account.addUser(user);
@@ -100,7 +100,16 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account removeUserFromAccount(String userId, String accountId, String userIdToBeAssigned) throws UseException {
-        return null;
+        Account account = accountsRepository.getEntityById(accountId).get();
+        User user = usersRepository.getEntityById(userIdToBeAssigned).get();
+
+        if (!account.getOwner().getId().equals(userId))
+            throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_OWNER);
+        if (account.getUsers().noneMatch(user1 -> user1.equals(usersRepository.getEntityById(userIdToBeAssigned).get())))
+            throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.USER_NOT_ASSIGNED_TO_THIS_ACCOUNT);
+
+        account.removeUser(user);
+        return accountsRepository.save(account);
     }
 
 
