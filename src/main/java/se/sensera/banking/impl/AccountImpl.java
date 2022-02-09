@@ -1,13 +1,17 @@
 package se.sensera.banking.impl;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import se.sensera.banking.Account;
 import se.sensera.banking.User;
 
 import java.util.stream.Stream;
 
 
+@AllArgsConstructor
+@Getter
+@Setter
 public class AccountImpl implements Account {
     String id;
     User owner;
@@ -20,37 +24,6 @@ public class AccountImpl implements Account {
         this.name = name;
         this.active = active;
     }
-
-    @Override
-    public String getId() {
-        return this.id;
-    }
-
-    @Override
-    public User getOwner() {
-        return this.owner;
-    }
-
-    @Override
-    public String getName() {
-        return this.name;
-    }
-
-    @Override
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    @Override
-    public boolean isActive() {
-        return active;
-    }
-
-    @Override
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
 
     @Override
     public Stream<User> getUsers() {
