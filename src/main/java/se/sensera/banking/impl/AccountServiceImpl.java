@@ -4,8 +4,10 @@ import se.sensera.banking.*;
 import se.sensera.banking.exceptions.Activity;
 import se.sensera.banking.exceptions.UseException;
 import se.sensera.banking.exceptions.UseExceptionType;
+import se.sensera.banking.utils.ListUtils;
 
 import javax.naming.Name;
+import java.util.Comparator;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -115,6 +117,8 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Stream<Account> findAccounts(String searchValue, String userId, Integer pageNumber, Integer pageSize, SortOrder sortOrder) throws UseException {
-        return null;
+
+        return ListUtils.applyPage(accountsRepository.all()
+                .filter(account -> account.getName().contains(searchValue)).sorted(Comparator.comparing(Account::getName)), pageNumber, pageSize);
     }
 }
