@@ -24,14 +24,18 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account createAccount(String userId, String accountName) throws UseException {
+        verifyAccountCreating(userId, accountName);
+        AccountImpl account = new AccountImpl(usersRepository.getEntityById(userId).get(), accountName, userId, true);
+        return accountsRepository.save(account);
+    }
+
+    private void verifyAccountCreating(String userId, String accountName) throws UseException {
         if (usersRepository.getEntityById(userId).isEmpty()) {
             throw new UseException(Activity.CREATE_ACCOUNT, UseExceptionType.USER_NOT_FOUND);
         }
         if (accountsRepository.all().anyMatch(x -> x.getName().equals(accountName))) {
             throw new UseException(Activity.CREATE_ACCOUNT, UseExceptionType.ACCOUNT_NAME_NOT_UNIQUE);
         }
-        AccountImpl account = new AccountImpl(usersRepository.getEntityById(userId).get(), accountName, userId, true);
-        return accountsRepository.save(account);
     }
 
     @Override
@@ -115,11 +119,13 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public Stream<Account> findAccounts(String searchValue, String userId, Integer pageNumber, Integer pageSize, SortOrder sortOrder) throws UseException {
 
-//        if (userId != null)
-//            return ListUtils.applyPage(accountsRepository.all()
-//                    .filter(account -> account.getOwner().getId().equals(userId)), pageNumber, pageSize);
-
-        return ListUtils.applyPage(accountsRepository.all()
-                .filter(account -> account.getName().contains(searchValue)).sorted(Comparator.comparing(Account::getName)), pageNumber, pageSize);
+        Stream<Account> all = accountsRepository.all();
+        if (searchValue != null && !searchValue.isEmpty())
+            all= all.filter(account -> account.getName().contains(searchValue));
+        if (userId != null)
+            all = all.filter(account -> account.getOwner().getId().equals(userId) || account.getUsers().anyMatch(user -> user.getId().equals(userId)));
+        if (sortOrder == SortOrder.AccountName)
+            all = all.sorted(Comparator.comparing(Account::getName));
+        return ListUtils.applyPage(all, pageNumber, pageSize);
     }
 }

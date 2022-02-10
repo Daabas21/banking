@@ -24,23 +24,21 @@ public class UserServiceImpl implements UserService {
 
     @java.lang.Override
     public User createUser(String name, String personalIdentificationNumber) throws UseException {
-        if(usersRepository.all()
-                .anyMatch(user1 -> user1.getPersonalIdentificationNumber().equals(personalIdentificationNumber)))
-            throw new UseException(Activity.CREATE_USER, UseExceptionType.USER_PERSONAL_ID_NOT_UNIQUE);
+        verifyPersonalIdentificationNumberDuplicated(personalIdentificationNumber);
 
         UserImpl user = new UserImpl(UUID.randomUUID().toString(), name, personalIdentificationNumber, true);
         return usersRepository.save(user);
+    }
 
+    private void verifyPersonalIdentificationNumberDuplicated(String personalIdentificationNumber) throws UseException {
+        if(usersRepository.all()
+                .anyMatch(user1 -> user1.getPersonalIdentificationNumber().equals(personalIdentificationNumber)))
+            throw new UseException(Activity.CREATE_USER, UseExceptionType.USER_PERSONAL_ID_NOT_UNIQUE);
     }
 
     @java.lang.Override
     public User changeUser(String userId, Consumer<ChangeUser> changeUser) throws UseException {
-        User user;
-        if (usersRepository.getEntityById(userId).isEmpty()) //Tittar först om det vi hämtar är tomt.
-            throw new UseException(Activity.UPDATE_USER, UseExceptionType.NOT_FOUND, "empty");
-        else
-            user = usersRepository.getEntityById(userId)
-                .get();
+        User user = getUser1(userId);
 
         AtomicBoolean save = new AtomicBoolean(false);
         changeUser.accept(new ChangeUser() {
@@ -71,6 +69,16 @@ public class UserServiceImpl implements UserService {
         return usersRepository.save(user);
 
 
+    }
+
+    private User getUser1(String userId) throws UseException {
+        User user;
+        if (usersRepository.getEntityById(userId).isEmpty()) //Tittar först om det vi hämtar är tomt.
+            throw new UseException(Activity.UPDATE_USER, UseExceptionType.NOT_FOUND, "empty");
+        else
+            user = usersRepository.getEntityById(userId)
+                .get();
+        return user;
     }
 
     @java.lang.Override
