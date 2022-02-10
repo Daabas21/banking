@@ -13,17 +13,10 @@ import java.util.stream.Stream;
 @Getter
 @Setter
 public class AccountImpl implements Account {
-    String id;
     User owner;
     String name;
+    String id;
     boolean active;
-
-    public AccountImpl(User owner, String name, String id, boolean active) {
-        this.id = id;
-        this.owner = owner;
-        this.name = name;
-        this.active = active;
-    }
 
     @Override
     public Stream<User> getUsers() {
