@@ -11,7 +11,6 @@ import se.sensera.banking.utils.ListUtils;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class UserServiceImpl implements UserService {
@@ -31,7 +30,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private void verifyPersonalIdentificationNumberDuplicated(String personalIdentificationNumber) throws UseException {
-        if(usersRepository.all()
+        if (usersRepository.all()
                 .anyMatch(user1 -> user1.getPersonalIdentificationNumber().equals(personalIdentificationNumber)))
             throw new UseException(Activity.CREATE_USER, UseExceptionType.USER_PERSONAL_ID_NOT_UNIQUE);
     }
@@ -51,20 +50,16 @@ public class UserServiceImpl implements UserService {
             @Override
             public void setPersonalIdentificationNumber(String personalIdentificationNumber) throws UseException {
                 if (usersRepository.all()
-                        .anyMatch(userToCheck -> userToCheck.getPersonalIdentificationNumber().equals(personalIdentificationNumber))){
+                        .anyMatch(userToCheck -> userToCheck.getPersonalIdentificationNumber().equals(personalIdentificationNumber))) {
                     throw new UseException(Activity.UPDATE_USER, UseExceptionType.USER_PERSONAL_ID_NOT_UNIQUE);
                 }
-                /*if (usersRepository.all()
-                        .noneMatch(user1 -> user1.getPersonalIdentificationNumber().equals(personalIdentificationNumber))){
-                    throw new UseException(Activity.UPDATE_USER, UseExceptionType.NOT_FOUND);
-                }*/
+
                 user.setPersonalIdentificationNumber(personalIdentificationNumber);
                 save.set(true);
-
             }
         });
 
-        if(!save.get())
+        if (!save.get())
             return user;
         return usersRepository.save(user);
 
@@ -77,16 +72,21 @@ public class UserServiceImpl implements UserService {
             throw new UseException(Activity.UPDATE_USER, UseExceptionType.NOT_FOUND, "empty");
         else
             user = usersRepository.getEntityById(userId)
-                .get();
+                    .get();
         return user;
     }
 
     @java.lang.Override
     public User inactivateUser(String userId) throws UseException {
-        User user= getUser(userId)
+        User user = ifUserNotFoundUseException(userId);
+        return usersRepository.save(user);
+    }
+
+    private User ifUserNotFoundUseException(String userId) throws UseException {
+        User user = getUser(userId)
                 .orElseThrow(() -> new UseException(Activity.UPDATE_USER, UseExceptionType.NOT_FOUND));
         user.setActive(false);
-        return usersRepository.save(user);
+        return user;
     }
 
     @java.lang.Override
@@ -98,19 +98,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public Stream<User> find(String searchString, Integer pageNumber, Integer pageSize, SortOrder sortOrder) {
 
-        if(sortOrder==SortOrder.PersonalId){
-            return ListUtils.applyPage(usersRepository.all()
-                    .sorted(Comparator.comparing(User::getPersonalIdentificationNumber)),pageNumber , pageSize);
-        }
+        Stream<User> all = usersRepository.all();
+        if (sortOrder == SortOrder.PersonalId) {
+            all = all.sorted(Comparator.comparing(User::getPersonalIdentificationNumber));
+        } else if (pageNumber == null && pageNumber == null && !SortOrder.PersonalId.equals(sortOrder) && !SortOrder.Name.equals(sortOrder) && searchString == "") {  // Dont show inactivated user
+            all = all.filter(User::isActive);
+        } else
+            all = all.filter(user -> user.getName().toLowerCase().contains(searchString)).sorted(Comparator.comparing(User::getName));
 
-        if(pageNumber== null && pageNumber== null && !SortOrder.PersonalId.equals(sortOrder) && !SortOrder.Name.equals(sortOrder) && searchString==""){  // Dont show inactivated user
-            return usersRepository.all().filter(User::isActive);
-        }
-            return ListUtils.applyPage(usersRepository.all()
-                .filter(user -> user.getName().toLowerCase().contains(searchString)).sorted(Comparator.comparing(User::getName)),pageNumber ,pageSize);
-
-//        if(usersRepository.all().allMatch(User::isActive))
-//        return  usersRepository.all().filter(User::isActive);
-
+        return ListUtils.applyPage(all, pageNumber, pageSize);
     }
 }

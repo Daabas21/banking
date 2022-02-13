@@ -7,7 +7,6 @@ import se.sensera.banking.exceptions.UseExceptionType;
 import se.sensera.banking.utils.ListUtils;
 
 import java.util.Comparator;
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -43,51 +42,78 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountsRepository.getEntityById(accountId).orElseThrow();
         User user = usersRepository.getEntityById(userId).orElseThrow();
 
+        verifyChangingAccount(changeAccountConsumer, account, user);
+        return account;
+    }
+
+    private void verifyChangingAccount(Consumer<ChangeAccount> changeAccountConsumer, Account account, User user) throws UseException {
         if (!account.getOwner().equals(user))
-            throw new UseException(Activity.UPDATE_ACCOUNT,UseExceptionType.NOT_OWNER);
-        if (!account.isActive()){
+            throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_OWNER);
+        if (!account.isActive()) {
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_ACTIVE);
         }
         changeAccountConsumer.accept(name -> {
-            if (accountsRepository.all().anyMatch(account1 -> account1.getName().equals(name))){
+            if (accountsRepository.all().anyMatch(account1 -> account1.getName().equals(name))) {
                 throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.ACCOUNT_NAME_NOT_UNIQUE);
             }
-            if (!name.equals(account.getName())) {
+            changingAccountName(account, name);
+        });
+    }
+
+    private void changingAccountName(Account account, String name) {
+        if (!name.equals(account.getName())) {
             account.setName(name);
             accountsRepository.save(account);
-            }
-        });
-        return account;
+        }
     }
 
     @Override
     public Account inactivateAccount(String userId, String accountId) throws UseException {
-        if(accountsRepository.getEntityById(accountId).isEmpty()){
-            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_FOUND);
-        }
-        if (usersRepository.getEntityById(userId).isEmpty()) {
-            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.USER_NOT_FOUND);
-        }
+        checkIfAccountOrUserNotFound(userId, accountId);
 
         Account account = accountsRepository.getEntityById(accountId).get();
         User user = usersRepository.getEntityById(userId).get();
-        if (!account.isActive())
-            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_ACTIVE);
-        if (!account.getOwner().equals(user))
-            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_OWNER);
+        verifyInactivateAccount(account, user);
 
         account.setActive(false);
         accountsRepository.save(account);
         return account;
     }
 
+    private void verifyInactivateAccount(Account account, User user) throws UseException {
+        if (!account.isActive())
+            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_ACTIVE);
+        if (!account.getOwner().equals(user))
+            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_OWNER);
+    }
+
+    private void checkIfAccountOrUserNotFound(String userId, String accountId) throws UseException {
+        if (accountsRepository.getEntityById(accountId).isEmpty()) {
+            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.NOT_FOUND);
+        }
+        if (usersRepository.getEntityById(userId).isEmpty()) {
+            throw new UseException(Activity.INACTIVATE_ACCOUNT, UseExceptionType.USER_NOT_FOUND);
+        }
+    }
+
     @Override
     public Account addUserToAccount(String userId, String accountId, String userIdToBeAssigned) throws UseException {
-        if (accountsRepository.getEntityById(accountId).isEmpty())
-            throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_FOUND);
+        ifAccountNotFound(accountId);
         Account account = accountsRepository.getEntityById(accountId).get();
         User user = usersRepository.getEntityById(userIdToBeAssigned).get();
 
+        verifyAddingUserToAccount(userId, userIdToBeAssigned, account);
+
+        account.addUser(user);
+        return accountsRepository.save(account);
+    }
+
+    private void ifAccountNotFound(String accountId) throws UseException {
+        if (accountsRepository.getEntityById(accountId).isEmpty())
+            throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_FOUND);
+    }
+
+    private void verifyAddingUserToAccount(String userId, String userIdToBeAssigned, Account account) throws UseException {
         if (!account.isActive())
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.ACCOUNT_NOT_ACTIVE);
         if (userId.equals(userIdToBeAssigned))
@@ -96,9 +122,6 @@ public class AccountServiceImpl implements AccountService {
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_OWNER);
         if (account.getUsers().anyMatch(user1 -> user1.equals(usersRepository.getEntityById(userIdToBeAssigned).get())))
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.USER_ALREADY_ASSIGNED_TO_THIS_ACCOUNT);
-
-        account.addUser(user);
-        return accountsRepository.save(account);
     }
 
     @Override
@@ -106,13 +129,17 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountsRepository.getEntityById(accountId).get();
         User user = usersRepository.getEntityById(userIdToBeAssigned).get();
 
+        verifyRemovingUserFromAccount(userId, userIdToBeAssigned, account);
+
+        account.removeUser(user);
+        return accountsRepository.save(account);
+    }
+
+    private void verifyRemovingUserFromAccount(String userId, String userIdToBeAssigned, Account account) throws UseException {
         if (!account.getOwner().getId().equals(userId))
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.NOT_OWNER);
         if (account.getUsers().noneMatch(user1 -> user1.equals(usersRepository.getEntityById(userIdToBeAssigned).get())))
             throw new UseException(Activity.UPDATE_ACCOUNT, UseExceptionType.USER_NOT_ASSIGNED_TO_THIS_ACCOUNT);
-
-        account.removeUser(user);
-        return accountsRepository.save(account);
     }
 
 
@@ -121,7 +148,7 @@ public class AccountServiceImpl implements AccountService {
 
         Stream<Account> all = accountsRepository.all();
         if (searchValue != null && !searchValue.isEmpty())
-            all= all.filter(account -> account.getName().contains(searchValue));
+            all = all.filter(account -> account.getName().contains(searchValue));
         if (userId != null)
             all = all.filter(account -> account.getOwner().getId().equals(userId) || account.getUsers().anyMatch(user -> user.getId().equals(userId)));
         if (sortOrder == SortOrder.AccountName)
